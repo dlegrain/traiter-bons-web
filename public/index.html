@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traitement des Bons ALDI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue-dark:  #1F4E78;
+      --blue-mid:   #2E75B6;
+      --blue-light: #BDD7EE;
+      --bg:         #EEF3F9;
+      --card:       #ffffff;
+      --text:       #1e293b;
+      --text-muted: #64748b;
+      --border:     #CBD5E1;
+      --success:    #16a34a;
+      --warn:       #d97706;
+      --error:      #dc2626;
+      --radius:     12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--blue-dark);
+      color: #fff;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .header-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.15);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -.3px; }
+    .header p  { font-size: .82rem; opacity: .7; margin-top: 2px; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 680px;
+      margin: 40px auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    .section-label {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--blue-mid);
+      margin-bottom: 10px;
+    }
+
+    /* ── Drop zones ── */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--blue-mid);
+      background: #F0F6FF;
+    }
+    .dropzone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .dropzone .dz-icon { font-size: 2.2rem; line-height: 1; margin-bottom: 8px; }
+    .dropzone .dz-title { font-weight: 600; font-size: .95rem; color: var(--text); }
+    .dropzone .dz-sub { font-size: .8rem; color: var(--text-muted); margin-top: 4px; }
+
+    .dropzone.small { padding: 16px 20px; }
+    .dropzone.small .dz-icon { font-size: 1.5rem; }
+    .dropzone.small .dz-title { font-size: .88rem; }
+
+    .dropzone.has-file {
+      border-color: var(--success);
+      background: #F0FDF4;
+    }
+    .dropzone.has-file .dz-icon::after { content: " ✓"; color: var(--success); }
+
+    /* ── File badge ── */
+    .file-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-top: 10px;
+      font-size: .82rem;
+      color: #166534;
+    }
+    .file-badge.visible { display: flex; }
+    .file-badge .remove-btn {
+      margin-left: auto;
+      cursor: pointer;
+      color: #6B7280;
+      font-size: 1.1rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .file-badge .remove-btn:hover { color: var(--error); }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 28px 0;
+    }
+
+    /* ── Site select ── */
+    .site-row {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .site-row label {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .site-row select {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: .88rem;
+      color: var(--text);
+      background: #fff;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      cursor: pointer;
+    }
+    .site-row select:disabled { opacity: .45; cursor: default; background-color: #f8fafc; }
+
+    /* ── Process button ── */
+    .btn-process {
+      display: block;
+      width: 100%;
+      margin-top: 28px;
+      padding: 14px;
+      background: var(--blue-dark);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background .2s, opacity .2s;
+      letter-spacing: .02em;
+    }
+    .btn-process:hover:not(:disabled) { background: #163d5f; }
+    .btn-process:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Loading state ── */
+    .loading-card {
+      display: none;
+      margin-top: 24px;
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      text-align: center;
+    }
+    .loading-card.visible { display: block; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--blue-light);
+      border-top-color: var(--blue-dark);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-card p { color: var(--text-muted); font-size: .9rem; }
+    .loading-card .loading-note {
+      margin-top: 10px;
+      font-size: .78rem;
+      color: var(--warn);
+    }
+
+    /* ── Error ── */
+    .error-card {
+      display: none;
+      margin-top: 24px;
+      background: #FFF5F5;
+      border: 1px solid #FCA5A5;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .error-card.visible { display: block; }
+    .error-card .error-title { font-weight: 700; color: var(--error); margin-bottom: 6px; }
+    .error-card p { font-size: .88rem; color: #7f1d1d; }
+
+    /* ── Results ── */
+    .results-card {
+      display: none;
+      margin-top: 24px;
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    }
+    .results-card.visible { display: block; }
+    .results-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .results-check {
+      width: 36px; height: 36px;
+      background: #DCFCE7;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .results-header h2 { font-size: 1.1rem; font-weight: 700; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .stat-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .stat-box .stat-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--blue-dark);
+      line-height: 1;
+    }
+    .stat-box .stat-label {
+      font-size: .76rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .stat-box.warn .stat-value { color: var(--warn); }
+
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 13px;
+      background: var(--success);
+      color: #fff;
+      font-size: .95rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .btn-download:hover { background: #15803d; }
+
+    .unknowns-notice {
+      display: none;
+      margin-top: 14px;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: .82rem;
+      color: #92400e;
+    }
+    .unknowns-notice.visible { display: block; }
+    .unknowns-notice strong { display: block; margin-bottom: 4px; }
+
+    .btn-reset {
+      margin-top: 14px;
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: .85rem;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-reset:hover { background: var(--bg); }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">📄</div>
+  <div>
+    <h1>Traitement des Bons ALDI</h1>
+    <p>Découpe, trie par signature et génère le récapitulatif Excel</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Main form card -->
+  <div class="card" id="form-card">
+
+    <!-- PDF upload -->
+    <p class="section-label">1 — PDF des bons (obligatoire)</p>
+    <div class="dropzone" id="pdf-zone">
+      <input type="file" id="pdf-input" accept=".pdf" />
+      <div class="dz-icon" id="pdf-icon">📑</div>
+      <div class="dz-title">Glissez votre PDF ici</div>
+      <div class="dz-sub">ou cliquez pour choisir un fichier</div>
+    </div>
+    <div class="file-badge" id="pdf-badge">
+      <span>📄</span>
+      <span id="pdf-name"></span>
+      <span id="pdf-size" style="color:var(--text-muted)"></span>
+      <span class="remove-btn" id="pdf-remove" title="Retirer">✕</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Excel upload -->
+    <p class="section-label">2 — Export Pointages.xlsx (optionnel)</p>
+    <div class="dropzone small" id="excel-zone">
+      <input type="file" id="excel-input" accept=".xlsx,.xls" />
+      <div class="dz-icon" id="excel-icon">📊</div>
+      <div class="dz-title">Export Pointages.xlsx</div>
+      <div class="dz-sub">Glissez ou cliquez — requis pour l'onglet pointages</div>
+    </div>
+    <div class="file-badge" id="excel-badge">
+      <span>📊</span>
+      <span id="excel-name"></span>
+      <span id="excel-size" style="color:var(--text-muted)"></span>
+      <span class="remove-btn" id="excel-remove" title="Retirer">✕</span>
+    </div>
+
+    <!-- Site dropdown -->
+    <div class="site-row">
+      <label for="site-select">Site ALDI :</label>
+      <select id="site-select" disabled>
+        <option value="">— choisir le site (requis avec Excel) —</option>
+        <option value="1">ALDI N.V. - ZEMST</option>
+        <option value="2">ALDI N.V. - ERPE MERE</option>
+        <option value="3">ALDI N.V. - HEUSDEN-ZOLDER</option>
+      </select>
+    </div>
+
+    <button class="btn-process" id="process-btn" disabled>
+      Traiter les bons
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-card" id="loading-card">
+    <div class="spinner"></div>
+    <p>Traitement en cours…</p>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-top:6px">
+      Découpe, détection des signatures, génération Excel
+    </p>
+    <p class="loading-note">⏱ PDFs volumineux : le traitement peut prendre jusqu'à 26 s.</p>
+  </div>
+
+  <!-- Error -->
+  <div class="error-card" id="error-card">
+    <div class="error-title">⚠ Erreur de traitement</div>
+    <p id="error-msg"></p>
+  </div>
+
+  <!-- Results -->
+  <div class="results-card" id="results-card">
+    <div class="results-header">
+      <div class="results-check">✓</div>
+      <h2>Traitement terminé</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Bons détectés</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-signes" style="color:var(--success)">—</div>
+        <div class="stat-label">Signés client</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-non-signes" style="color:var(--error)">—</div>
+        <div class="stat-label">Non signés</div>
+      </div>
+      <div class="stat-box" id="stat-unk-box">
+        <div class="stat-value" id="stat-unknowns">—</div>
+        <div class="stat-label">Codes inconnus (UNK)</div>
+      </div>
+    </div>
+
+    <a class="btn-download" id="download-link" href="#" download="bons_traites.zip">
+      ⬇ Télécharger le ZIP
+    </a>
+
+    <div class="unknowns-notice" id="unknowns-notice">
+      <strong>Prestations non reconnues</strong>
+      Le fichier <code>prestations_inconnues.txt</code> dans le ZIP liste les libellés
+      auxquels le code <strong>UNK</strong> a été attribué automatiquement.
+      Pensez à les vérifier manuellement.
+    </div>
+
+    <button class="btn-reset" id="reset-btn">Traiter un autre PDF</button>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  const FUNCTION_URL = "/.netlify/functions/process";
+
+  // ── State ──
+  let pdfFile = null;
+  let excelFile = null;
+  let downloadUrl = null;
+
+  // ── Elements ──
+  const pdfZone    = document.getElementById("pdf-zone");
+  const pdfInput   = document.getElementById("pdf-input");
+  const pdfBadge   = document.getElementById("pdf-badge");
+  const pdfIcon    = document.getElementById("pdf-icon");
+  const excelZone  = document.getElementById("excel-zone");
+  const excelInput = document.getElementById("excel-input");
+  const excelBadge = document.getElementById("excel-badge");
+  const excelIcon  = document.getElementById("excel-icon");
+  const siteSelect = document.getElementById("site-select");
+  const processBtn = document.getElementById("process-btn");
+  const loadingCard  = document.getElementById("loading-card");
+  const errorCard    = document.getElementById("error-card");
+  const resultsCard  = document.getElementById("results-card");
+  const downloadLink = document.getElementById("download-link");
+  const resetBtn     = document.getElementById("reset-btn");
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + " o";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " Ko";
+    return (bytes / (1024 * 1024)).toFixed(1) + " Mo";
+  }
+
+  function updateProcessBtn() {
+    processBtn.disabled = !pdfFile;
+  }
+
+  // ── PDF file handling ──
+  function setPdfFile(file) {
+    if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
+      alert("Veuillez choisir un fichier PDF (.pdf).");
+      return;
+    }
+    pdfFile = file;
+    document.getElementById("pdf-name").textContent = file.name;
+    document.getElementById("pdf-size").textContent = "(" + fmtSize(file.size) + ")";
+    pdfBadge.classList.add("visible");
+    pdfZone.classList.add("has-file");
+    updateProcessBtn();
+  }
+
+  function removePdf() {
+    pdfFile = null;
+    pdfInput.value = "";
+    pdfBadge.classList.remove("visible");
+    pdfZone.classList.remove("has-file");
+    updateProcessBtn();
+  }
+
+  pdfInput.addEventListener("change", () => pdfInput.files[0] && setPdfFile(pdfInput.files[0]));
+  document.getElementById("pdf-remove").addEventListener("click", (e) => { e.stopPropagation(); removePdf(); });
+
+  setupDropzone(pdfZone, (file) => setPdfFile(file));
+
+  // ── Excel file handling ──
+  function setExcelFile(file) {
+    if (!file || (!file.name.toLowerCase().endsWith(".xlsx") && !file.name.toLowerCase().endsWith(".xls"))) {
+      alert("Veuillez choisir un fichier Excel (.xlsx).");
+      return;
+    }
+    excelFile = file;
+    document.getElementById("excel-name").textContent = file.name;
+    document.getElementById("excel-size").textContent = "(" + fmtSize(file.size) + ")";
+    excelBadge.classList.add("visible");
+    excelZone.classList.add("has-file");
+    siteSelect.disabled = false;
+  }
+
+  function removeExcel() {
+    excelFile = null;
+    excelInput.value = "";
+    excelBadge.classList.remove("visible");
+    excelZone.classList.remove("has-file");
+    siteSelect.disabled = true;
+    siteSelect.value = "";
+  }
+
+  excelInput.addEventListener("change", () => excelInput.files[0] && setExcelFile(excelInput.files[0]));
+  document.getElementById("excel-remove").addEventListener("click", (e) => { e.stopPropagation(); removeExcel(); });
+
+  setupDropzone(excelZone, (file) => setExcelFile(file));
+
+  // ── Generic drag-and-drop setup ──
+  function setupDropzone(zone, onFile) {
+    zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("dragover"); });
+    zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+    zone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      zone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file) onFile(file);
+    });
+  }
+
+  // ── Process ──
+  processBtn.addEventListener("click", async () => {
+    if (!pdfFile) return;
+
+    // Hide previous results/errors
+    errorCard.classList.remove("visible");
+    resultsCard.classList.remove("visible");
+    loadingCard.classList.add("visible");
+    processBtn.disabled = true;
+
+    // Release previous download URL
+    if (downloadUrl) { URL.revokeObjectURL(downloadUrl); downloadUrl = null; }
+
+    try {
+      const fd = new FormData();
+      fd.append("pdf", pdfFile, pdfFile.name);
+      if (excelFile) {
+        fd.append("excel", excelFile, excelFile.name);
+        if (siteSelect.value) fd.append("site", siteSelect.value);
+      }
+
+      const res = await fetch(FUNCTION_URL, { method: "POST", body: fd });
+
+      if (!res.ok) {
+        let detail = "Erreur serveur inattendue.";
+        try { detail = (await res.json()).detail || detail; } catch {}
+        throw new Error(detail);
+      }
+
+      const stats = {
+        total:     res.headers.get("X-Stats-Total")    || "?",
+        signes:    res.headers.get("X-Stats-Signed")   || "?",
+        nonSignes: res.headers.get("X-Stats-Unsigned") || "?",
+        unknowns:  parseInt(res.headers.get("X-Stats-Unknowns") || "0", 10),
+        pointages: res.headers.get("X-Stats-Pointages"),
+      };
+
+      const blob = await res.blob();
+      downloadUrl = URL.createObjectURL(blob);
+      downloadLink.href = downloadUrl;
+
+      document.getElementById("stat-total").textContent     = stats.total;
+      document.getElementById("stat-signes").textContent    = stats.signes;
+      document.getElementById("stat-non-signes").textContent = stats.nonSignes;
+      document.getElementById("stat-unknowns").textContent  = stats.unknowns;
+
+      const unkBox = document.getElementById("stat-unk-box");
+      if (stats.unknowns > 0) {
+        unkBox.classList.add("warn");
+        document.getElementById("unknowns-notice").classList.add("visible");
+      } else {
+        unkBox.classList.remove("warn");
+        document.getElementById("unknowns-notice").classList.remove("visible");
+      }
+
+      loadingCard.classList.remove("visible");
+      resultsCard.classList.add("visible");
+
+    } catch (err) {
+      loadingCard.classList.remove("visible");
+      document.getElementById("error-msg").textContent = err.message;
+      errorCard.classList.add("visible");
+      processBtn.disabled = false;
+    }
+  });
+
+  // ── Reset ──
+  resetBtn.addEventListener("click", () => {
+    removePdf();
+    removeExcel();
+    resultsCard.classList.remove("visible");
+    errorCard.classList.remove("visible");
+    if (downloadUrl) { URL.revokeObjectURL(downloadUrl); downloadUrl = null; }
+  });
+</script>
+</body>
+</html>
