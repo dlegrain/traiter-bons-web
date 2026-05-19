@@ -16,23 +16,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install function dependencies (Linux wheels)
-        run: |
-          pip install \
-            PyMuPDF==1.25.5 \
-            openpyxl==3.1.5 \
-            pandas==2.2.3 \
-            --target netlify/functions/process/ \
-            --upgrade
-
-      - name: Deploy to Netlify
+      - name: Deploy via Netlify build system (installs Linux Python wheels)
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           npm install -g netlify-cli --silent
-          netlify deploy \
-            --prod \
-            --dir=public \
-            --functions=netlify/functions \
-            --message="Deploy from GitHub Actions"
+          netlify deploy --build --prod

@@ -1,3 +1,7 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+  command = "pip install PyMuPDF==1.25.5 openpyxl==3.1.5 pandas==2.2.3 --target netlify/functions/process/ --upgrade --quiet"
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
