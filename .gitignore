@@ -6,3 +6,6 @@ __pycache__/
 node_modules/
 *.zip
 *.pdf
+# Dépendances Python bundlées par le CI (ne pas committer)
+netlify/functions/process/*.dist-info/
+netlify/functions/process/bin/
